@@ -1,0 +1,69 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and configuration settings",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 150 },
+        "photoURL": { "type": "string", "maxLength": 500 },
+        "theme": { "type": "string", "enum": ["light", "dark", "system"] },
+        "phoneFormat": { "type": "string", "maxLength": 30 },
+        "customCategories": { "type": "array" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["email"]
+    },
+    "Contact": {
+      "title": "Contact",
+      "description": "Individual telephone directory contact record",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "phone": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "email": { "type": "string", "maxLength": 150 },
+        "address": { "type": "string", "maxLength": 300 },
+        "company": { "type": "string", "maxLength": 120 },
+        "jobTitle": { "type": "string", "maxLength": 120 },
+        "category": { "type": "string", "maxLength": 50 },
+        "tags": { "type": "array" },
+        "birthday": { "type": "string", "maxLength": 20 },
+        "notes": { "type": "string", "maxLength": 2000 },
+        "avatarUrl": { "type": "string", "maxLength": 500 },
+        "isFavorite": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "phone", "category", "isFavorite"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "User activity audit entry (create, update, delete, import)",
+      "type": "object",
+      "properties": {
+        "action": { "type": "string", "enum": ["create", "update", "delete", "favorite", "unfavorite", "import", "export"] },
+        "description": { "type": "string", "maxLength": 250 },
+        "contactName": { "type": "string", "maxLength": 120 },
+        "contactId": { "type": "string", "maxLength": 128 },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["action", "description", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "UserProfile" },
+      "description": "User account document containing preferences and settings"
+    },
+    "/users/{userId}/contacts/{contactId}": {
+      "schema": { "$ref": "Contact" },
+      "description": "Personal contacts owned by the user"
+    },
+    "/users/{userId}/activity/{activityId}": {
+      "schema": { "$ref": "ActivityLog" },
+      "description": "User activity log for directory actions"
+    }
+  }
+}

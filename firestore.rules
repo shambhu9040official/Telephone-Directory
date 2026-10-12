@@ -1,0 +1,93 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny Catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation for User Profile
+    function isValidUserProfile(data) {
+      return (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 150)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500)) &&
+             (!('theme' in data) || (data.theme in ['light', 'dark', 'system'])) &&
+             (!('phoneFormat' in data) || (data.phoneFormat is string && data.phoneFormat.size() <= 30)) &&
+             (!('customCategories' in data) || (data.customCategories is list && data.customCategories.size() <= 50));
+    }
+
+    // Validation for Contact
+    function isValidContact(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 120 &&
+             data.phone is string && data.phone.size() > 0 && data.phone.size() <= 40 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 150)) &&
+             (!('address' in data) || (data.address is string && data.address.size() <= 300)) &&
+             (!('company' in data) || (data.company is string && data.company.size() <= 120)) &&
+             (!('jobTitle' in data) || (data.jobTitle is string && data.jobTitle.size() <= 120)) &&
+             (!('category' in data) || (data.category is string && data.category.size() <= 50)) &&
+             (!('tags' in data) || (data.tags is list && data.tags.size() <= 20)) &&
+             (!('birthday' in data) || (data.birthday is string && data.birthday.size() <= 20)) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 2000)) &&
+             (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 500)) &&
+             data.isFavorite is bool;
+    }
+
+    // Validation for Activity Log
+    function isValidActivity(data) {
+      return data.action is string &&
+             data.description is string && data.description.size() <= 250 &&
+             data.timestamp is string && data.timestamp.size() <= 50;
+    }
+
+    // User Profile Documents
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming());
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming());
+      allow delete: if false;
+
+      // Contacts Subcollection
+      match /contacts/{contactId} {
+        allow get: if isOwner(userId) && isValidId(contactId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(contactId) && isValidContact(incoming());
+        allow update: if isOwner(userId) && isValidId(contactId) && isValidContact(incoming());
+        allow delete: if isOwner(userId) && isValidId(contactId);
+      }
+
+      // Activity Logs Subcollection
+      match /activity/{activityId} {
+        allow get: if isOwner(userId) && isValidId(activityId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(activityId) && isValidActivity(incoming());
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(activityId);
+      }
+    }
+
+    // Test connection doc used for client connectivity check
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+  }
+}
